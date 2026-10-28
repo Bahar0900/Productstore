@@ -1,0 +1,86 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Login - ProductStore";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-5">
+        <div class="card shadow border-0 rounded-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-2">
+                        <i class="fa-solid fa-lock fa-2x"></i>
+                    </div>
+                    <h3 class="fw-bold">Sign In</h3>
+                    <p class="text-muted small">Access your ProductStore account & manage orders</p>
+                </div>
+
+                <form method="post" asp-controller="Account" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger p-2 small"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-solid fa-envelope text-muted"></i></span>
+                            <input asp-for="Email" class="form-control" id="emailInput" placeholder="name@example.com" autofocus />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-solid fa-key text-muted"></i></span>
+                            <input asp-for="Password" class="form-control" id="passwordInput" placeholder="••••••••" />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label text-muted small">Remember this device (7 days)</label>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                            <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Sign In
+                        </button>
+                    </div>
+
+                    <div class="text-center small text-muted">
+                        Don't have an account yet? 
+                        <a asp-controller="Account" asp-action="Register" class="text-primary fw-semibold text-decoration-none">Create account</a>
+                    </div>
+                </form>
+
+                @* Quick Test Credentials Helper Card *@
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted small fw-bold text-uppercase mb-2 text-center">Quick Test Login Profiles:</h6>
+                    <div class="d-flex flex-column gap-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm text-start" onclick="fillCreds('admin@productstore.com', 'Admin@123')">
+                            <i class="fa-solid fa-shield-halved me-1"></i> <strong>Admin</strong> (admin@productstore.com / Admin@123)
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm text-start text-dark" onclick="fillCreds('seller@productstore.com', 'Seller@123')">
+                            <i class="fa-solid fa-shop me-1"></i> <strong>Product Owner / Seller</strong> (seller@productstore.com / Seller@123)
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm text-start" onclick="fillCreds('customer@productstore.com', 'Customer@123')">
+                            <i class="fa-solid fa-user me-1"></i> <strong>Customer</strong> (customer@productstore.com / Customer@123)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function fillCreds(email, password) {
+            document.getElementById('emailInput').value = email;
+            document.getElementById('passwordInput').value = password;
+        }
+    </script>
+}

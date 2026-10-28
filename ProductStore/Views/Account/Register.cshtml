@@ -1,0 +1,87 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Register - ProductStore";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-7">
+        <div class="card shadow border-0 rounded-3">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="bg-warning bg-opacity-25 text-warning rounded-circle d-inline-flex p-3 mb-2">
+                        <i class="fa-solid fa-user-plus fa-2x text-dark"></i>
+                    </div>
+                    <h3 class="fw-bold">Create Account</h3>
+                    <p class="text-muted small">Join ProductStore to buy products or start selling your own!</p>
+                </div>
+
+                <form method="post" asp-controller="Account" asp-action="Register">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger p-2 small"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label fw-semibold">Full Name</label>
+                            <input asp-for="FullName" class="form-control" placeholder="John Doe" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                            <input asp-for="Email" class="form-control" placeholder="name@example.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                            <input asp-for="Password" class="form-control" placeholder="Minimum 6 characters" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="ConfirmPassword" class="form-label fw-semibold">Confirm Password</label>
+                            <input asp-for="ConfirmPassword" class="form-control" placeholder="Repeat password" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label fw-semibold">Phone Number</label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="017xxxxxxxx" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Role" class="form-label fw-semibold">Account Type</label>
+                            <select asp-for="Role" class="form-select">
+                                <option value="@UserRoles.Customer">Customer (Buy Products)</option>
+                                <option value="@UserRoles.ProductOwner">Product Owner / Seller (Launch & Sell Products)</option>
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Address" class="form-label fw-semibold">Delivery / Store Address</label>
+                            <textarea asp-for="Address" class="form-control" rows="2" placeholder="House, Road, Area, City..."></textarea>
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4 mb-3">
+                        <button type="submit" class="btn btn-warning btn-lg fw-semibold text-dark">
+                            <i class="fa-solid fa-circle-check me-2"></i> Register Account
+                        </button>
+                    </div>
+
+                    <div class="text-center small text-muted">
+                        Already have an account? 
+                        <a asp-controller="Account" asp-action="Login" class="text-primary fw-semibold text-decoration-none">Sign in here</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

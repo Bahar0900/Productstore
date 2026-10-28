@@ -1,0 +1,110 @@
+@model UserManagementViewModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "User & Role Management";
+    var currentUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    int.TryParse(currentUserIdClaim, out int currentUserId);
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i> User & Role Management</h2>
+        <p class="text-muted mb-0">Control user accounts, promote sellers, assign admin privileges, activate or deactivate access</p>
+    </div>
+    <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">ID</th>
+                        <th>User Name</th>
+                        <th>Email & Phone</th>
+                        <th>Role</th>
+                        <th>Account Status</th>
+                        <th>Registered</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        var isSelf = user.Id == currentUserId;
+                        <tr>
+                            <td class="ps-3 fw-bold text-muted">#@user.Id</td>
+                            <td>
+                                <div class="fw-bold">@user.FullName</div>
+                                @if (isSelf)
+                                {
+                                    <span class="badge bg-secondary">You (Logged in)</span>
+                                }
+                            </td>
+                            <td>
+                                <div><i class="fa-solid fa-envelope me-1 text-muted"></i> @user.Email</div>
+                                @if (!string.IsNullOrEmpty(user.PhoneNumber))
+                                {
+                                    <div class="small text-muted"><i class="fa-solid fa-phone me-1"></i> @user.PhoneNumber</div>
+                                }
+                            </td>
+                            <td>
+                                @if (isSelf)
+                                {
+                                    <span class="badge bg-danger">@user.Role</span>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Admin" asp-action="ChangeUserRole" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <select name="role" class="form-select form-select-sm" style="width: 140px;" onchange="this.form.submit()">
+                                            <option value="@UserRoles.Customer" selected="@(user.Role == UserRoles.Customer)">Customer</option>
+                                            <option value="@UserRoles.ProductOwner" selected="@(user.Role == UserRoles.ProductOwner)">ProductOwner</option>
+                                            <option value="@UserRoles.Admin" selected="@(user.Role == UserRoles.Admin)">Admin</option>
+                                        </select>
+                                    </form>
+                                }
+                            </td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="fa-solid fa-ban me-1"></i> Deactivated</span>
+                                }
+                            </td>
+                            <td class="small text-muted">@user.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td class="text-end pe-3">
+                                @if (!isSelf)
+                                {
+                                    <form asp-controller="Admin" asp-action="ToggleUserStatus" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to change this user account status?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        @if (user.IsActive)
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate user">
+                                                <i class="fa-solid fa-ban me-1"></i> Deactivate
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Activate user">
+                                                <i class="fa-solid fa-check me-1"></i> Activate
+                                            </button>
+                                        }
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

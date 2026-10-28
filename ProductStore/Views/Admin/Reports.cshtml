@@ -1,0 +1,95 @@
+@model List<OrderSummaryView>
+@{
+    ViewData["Title"] = "Database View Reports (vw_OrderSummaries)";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-database text-info me-2"></i> SQL View Report: <code>vw_OrderSummaries</code></h2>
+        <p class="text-muted mb-0">Direct SQL Server view querying joined Orders, Users, OrderItems, and Payments</p>
+    </div>
+    <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+    </a>
+</div>
+
+<div class="alert alert-info py-3 mb-4 shadow-sm">
+    <div class="d-flex align-items-center gap-3">
+        <i class="fa-solid fa-code fa-2x text-primary"></i>
+        <div>
+            <h6 class="fw-bold mb-1">Underlying SQL Database View: <code>[dbo].[vw_OrderSummaries]</code></h6>
+            <div class="small">
+                This table is populated by Entity Framework Core executing <code>SELECT * FROM [dbo].[vw_OrderSummaries]</code>.
+                It aggregates cross-table data (Orders + Customers + Payments + OrderItems sum) directly at the database engine level.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Order Number</th>
+                        <th>Date</th>
+                        <th>Customer Name</th>
+                        <th>Customer Email</th>
+                        <th class="text-center">Items</th>
+                        <th>Payment Method</th>
+                        <th>TrxID</th>
+                        <th>Payment Status</th>
+                        <th>Total Amount</th>
+                        <th class="text-end pe-3">Order Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                No records currently stored in <code>vw_OrderSummaries</code>.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var row in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@row.OrderNumber</td>
+                                <td class="small text-muted">@row.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="fw-semibold">@row.CustomerName</td>
+                                <td class="small text-muted">@row.CustomerEmail</td>
+                                <td class="text-center fw-bold">@row.TotalItems</td>
+                                <td>
+                                    <span class="badge bg-secondary">@(row.PaymentMethod ?? "COD")</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(row.TransactionId))
+                                    {
+                                        <code>@row.TransactionId</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(row.PaymentStatus == PaymentStatuses.Verified ? "bg-success" : "bg-warning text-dark")">
+                                        @(row.PaymentStatus ?? "Pending")
+                                    </span>
+                                </td>
+                                <td class="fw-bold text-primary">$@row.TotalAmount.ToString("F2")</td>
+                                <td class="text-end pe-3">
+                                    <span class="badge bg-dark">@row.OrderStatus</span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

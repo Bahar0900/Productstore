@@ -1,0 +1,229 @@
+@model CheckoutViewModel
+@{
+    ViewData["Title"] = "Secure Checkout";
+}
+
+<div class="row g-4 mb-5">
+    <div class="col-lg-8">
+        <form method="post" asp-controller="Checkout" asp-action="PlaceOrder" id="checkoutForm">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger p-2 small"></div>
+
+            @* Step 1: Shipping Address *@
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-fast me-2 text-warning"></i> 1. Shipping & Delivery Address</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="ShippingFullName" class="form-label fw-semibold">Recipient Full Name</label>
+                            <input asp-for="ShippingFullName" class="form-control" placeholder="Recipient's Name" />
+                            <span asp-validation-for="ShippingFullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="ShippingEmail" class="form-label fw-semibold">Email (For Invoice)</label>
+                            <input asp-for="ShippingEmail" class="form-control" placeholder="recipient@example.com" />
+                            <span asp-validation-for="ShippingEmail" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="ShippingPhone" class="form-label fw-semibold">Contact Mobile Number</label>
+                            <input asp-for="ShippingPhone" class="form-control" placeholder="017xxxxxxxx" />
+                            <span asp-validation-for="ShippingPhone" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="OrderNotes" class="form-label fw-semibold">Delivery Instructions (Optional)</label>
+                            <input asp-for="OrderNotes" class="form-control" placeholder="e.g. Leave at front desk" />
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="ShippingAddress" class="form-label fw-semibold">Full Delivery Address</label>
+                            <textarea asp-for="ShippingAddress" class="form-control" rows="2" placeholder="House number, road number, area, district..."></textarea>
+                            <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Step 2: Payment Method Selection *@
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fa-solid fa-wallet me-2 text-warning"></i> 2. Payment Method</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100 payment-option-card">
+                                <input class="form-check-input" type="radio" name="PaymentMethod" id="payMobile" value="@PaymentMethods.MobileBanking" checked onchange="togglePaymentSection('mobile')">
+                                <label class="form-check-label fw-bold d-block" for="payMobile">
+                                    <i class="fa-solid fa-mobile-screen text-danger me-1"></i> Mobile Banking
+                                    <div class="small text-muted fw-normal mt-1">bKash, Nagad, Rocket</div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100 payment-option-card">
+                                <input class="form-check-input" type="radio" name="PaymentMethod" id="payBank" value="@PaymentMethods.DirectBanking" onchange="togglePaymentSection('bank')">
+                                <label class="form-check-label fw-bold d-block" for="payBank">
+                                    <i class="fa-solid fa-building-columns text-primary me-1"></i> Direct Banking
+                                    <div class="small text-muted fw-normal mt-1">Bank Wire / Account Transfer</div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100 payment-option-card">
+                                <input class="form-check-input" type="radio" name="PaymentMethod" id="payCOD" value="@PaymentMethods.CashOnDelivery" onchange="togglePaymentSection('cod')">
+                                <label class="form-check-label fw-bold d-block" for="payCOD">
+                                    <i class="fa-solid fa-hand-holding-dollar text-success me-1"></i> Cash On Delivery
+                                    <div class="small text-muted fw-normal mt-1">Pay when item arrives</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Section A: Mobile Banking Details *@
+                    <div id="sectionMobile" class="p-3 bg-light rounded-3 border">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            <strong>Merchant Account:</strong> Send money to <code>01700-123456</code> (ProductStore Merchant), then submit your sender number and Transaction ID (TrxID) below.
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label asp-for="MobileProvider" class="form-label fw-semibold">Service Provider</label>
+                                <select asp-for="MobileProvider" class="form-select">
+                                    <option value="bKash">bKash</option>
+                                    <option value="Nagad">Nagad</option>
+                                    <option value="Rocket">Rocket</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="MobileAccountNumber" class="form-label fw-semibold">Your Mobile Number</label>
+                                <input asp-for="MobileAccountNumber" class="form-control" placeholder="017xxxxxxxx" />
+                                <span asp-validation-for="MobileAccountNumber" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="MobileTransactionId" class="form-label fw-semibold">Transaction ID (TrxID)</label>
+                                <input asp-for="MobileTransactionId" class="form-control text-uppercase" placeholder="e.g. 9J47AB89C" />
+                                <span asp-validation-for="MobileTransactionId" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Section B: Direct Banking Details *@
+                    <div id="sectionBank" class="p-3 bg-light rounded-3 border d-none">
+                        <div class="alert alert-primary py-2 small mb-3">
+                            <i class="fa-solid fa-building-columns me-1"></i>
+                            <strong>Bank Transfer Info:</strong><br />
+                            Bank: <strong>City Bank Limited</strong> | A/C Name: <strong>ProductStore E-Commerce Ltd</strong><br />
+                            A/C Number: <strong>123-456-789012</strong> | Branch: <strong>Principal Branch</strong> | Routing: <strong>225271829</strong>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label asp-for="BankName" class="form-label fw-semibold">Sending Bank Name</label>
+                                <input asp-for="BankName" class="form-control" placeholder="e.g. City Bank, DBBL, SCB" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="BankAccountNumber" class="form-label fw-semibold">Sender Account Number</label>
+                                <input asp-for="BankAccountNumber" class="form-control" placeholder="Your Bank A/C Number" />
+                                <span asp-validation-for="BankAccountNumber" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="BankTransactionId" class="form-label fw-semibold">Deposit Slip / Ref ID</label>
+                                <input asp-for="BankTransactionId" class="form-control" placeholder="e.g. REF-20261028-01" />
+                                <span asp-validation-for="BankTransactionId" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Section C: Cash on Delivery *@
+                    <div id="sectionCOD" class="p-3 bg-light rounded-3 border d-none">
+                        <div class="alert alert-success py-2 small mb-0">
+                            <i class="fa-solid fa-truck me-1"></i>
+                            <strong>Cash on Delivery selected.</strong> You will pay <strong>$@Model.TotalAmount.ToString("F2")</strong> in cash directly to the delivery courier when your package arrives at your doorstep.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-warning btn-lg fw-bold text-dark shadow py-3">
+                    <i class="fa-solid fa-shield-check me-2"></i> Confirm & Place Order ($@Model.TotalAmount.ToString("F2"))
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @* Order Review Column *@
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-3 position-sticky" style="top: 20px;">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-bag-shopping me-2 text-warning"></i> Order Items (@Model.Items.Sum(i => i.Quantity))</h5>
+            </div>
+            <div class="card-body p-3">
+                <div class="mb-3" style="max-height: 280px; overflow-y: auto;">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="/ProductImages/@item.Product.ImageFileName" width="45" height="45" class="rounded border object-fit-contain bg-white" alt="@item.Product.Name">
+                                <div>
+                                    <div class="fw-semibold small text-truncate" style="max-width: 160px;" title="@item.Product.Name">@item.Product.Name</div>
+                                    <div class="small text-muted">Qty: @item.Quantity &times; $@item.Product.Price.ToString("F2")</div>
+                                </div>
+                            </div>
+                            <div class="fw-bold text-dark small">$@((item.Quantity * item.Product.Price).ToString("F2"))</div>
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 small">
+                    <span class="text-muted">Subtotal</span>
+                    <span class="fw-semibold">$@Model.SubTotal.ToString("F2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 small">
+                    <span class="text-muted">Shipping Fee</span>
+                    <span class="fw-semibold">$@Model.ShippingFee.ToString("F2")</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fw-bold">Total Amount</span>
+                    <span class="fs-5 fw-bold text-primary">$@Model.TotalAmount.ToString("F2")</span>
+                </div>
+
+                <div class="text-center small text-muted">
+                    <i class="fa-solid fa-circle-check text-success me-1"></i> Safe & Verified Checkout
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function togglePaymentSection(type) {
+            document.getElementById('sectionMobile').classList.add('d-none');
+            document.getElementById('sectionBank').classList.add('d-none');
+            document.getElementById('sectionCOD').classList.add('d-none');
+
+            if (type === 'mobile') {
+                document.getElementById('sectionMobile').classList.remove('d-none');
+            } else if (type === 'bank') {
+                document.getElementById('sectionBank').classList.remove('d-none');
+            } else if (type === 'cod') {
+                document.getElementById('sectionCOD').classList.remove('d-none');
+            }
+        }
+    </script>
+}

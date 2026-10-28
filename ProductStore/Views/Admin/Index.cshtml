@@ -1,0 +1,158 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-gauge-high text-danger me-2"></i> Master Admin Control Center</h2>
+        <p class="text-muted mb-0">Platform performance, real-time revenue, order management & user control</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Admin" asp-action="Orders" class="btn btn-outline-dark btn-sm">
+            <i class="fa-solid fa-boxes-packing me-1"></i> Manage Orders
+        </a>
+        <a asp-controller="Admin" asp-action="Users" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-users-gear me-1"></i> Manage Users
+        </a>
+    </div>
+</div>
+
+@* KPI Stat Cards *@
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Total Revenue</div>
+            <h4 class="fw-bold text-success my-1">$@Model.TotalRevenue.ToString("F2")</h4>
+            <div class="small text-muted"><i class="fa-solid fa-arrow-trend-up text-success me-1"></i> Lifetime Gross</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Total Orders</div>
+            <h4 class="fw-bold text-primary my-1">@Model.TotalOrders</h4>
+            <div class="small text-muted">All Placed Orders</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Pending Orders</div>
+            <h4 class="fw-bold text-warning my-1">@Model.PendingOrders</h4>
+            <div class="small text-muted">Needs Processing</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Pending Payments</div>
+            <h4 class="fw-bold text-danger my-1">@Model.PendingPayments</h4>
+            <div class="small text-muted">Awaiting TrxID Check</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Registered Users</div>
+            <h4 class="fw-bold text-info my-1">@Model.TotalUsers</h4>
+            <div class="small text-muted">Customers & Sellers</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card shadow-sm border-0 rounded-3 bg-white p-3 text-center">
+            <div class="text-muted small fw-semibold text-uppercase">Active Products</div>
+            <h4 class="fw-bold text-dark my-1">@Model.TotalProducts</h4>
+            <div class="small text-muted">In Marketplace</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    @* Recent Orders Table *@
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i> Recent Orders</h5>
+                <a asp-controller="Admin" asp-action="Orders" class="btn btn-sm btn-outline-light">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Order Number</th>
+                                <th>Customer</th>
+                                <th>Total</th>
+                                <th>Payment</th>
+                                <th>Status</th>
+                                <th class="text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.RecentOrders.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">No orders found.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold">@order.OrderNumber</td>
+                                        <td>
+                                            <div class="fw-semibold">@order.ShippingFullName</div>
+                                            <div class="small text-muted">@order.ShippingPhone</div>
+                                        </td>
+                                        <td class="fw-bold text-primary">$@order.TotalAmount.ToString("F2")</td>
+                                        <td>
+                                            <span class="badge @(order.Payment?.Status == PaymentStatuses.Verified ? "bg-success" : "bg-warning text-dark")">
+                                                @(order.Payment?.PaymentMethod ?? "COD"): @(order.Payment?.Status ?? "Pending")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">@order.OrderStatus</span>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Recent Users Table *@
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-users me-2 text-warning"></i> Recent Users</h5>
+                <a asp-controller="Admin" asp-action="Users" class="btn btn-sm btn-outline-light">Manage</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @foreach (var user in Model.RecentUsers)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <div>
+                                <div class="fw-bold">@user.FullName</div>
+                                <div class="small text-muted">@user.Email</div>
+                                <div class="small text-muted">Joined @user.CreatedAt.ToString("MMM dd, yyyy")</div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge @(user.Role == UserRoles.Admin ? "bg-danger" : user.Role == UserRoles.ProductOwner ? "bg-info text-dark" : "bg-primary")">@user.Role</span>
+                                <div class="mt-1">
+                                    <span class="badge @(user.IsActive ? "bg-success" : "bg-secondary")">@(user.IsActive ? "Active" : "Disabled")</span>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

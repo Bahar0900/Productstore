@@ -1,0 +1,69 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "My Profile - ProductStore";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-7">
+        <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-id-card me-2 text-warning"></i> My Profile</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" asp-controller="Account" asp-action="Profile">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger p-2 small"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Account Role</label>
+                            <div>
+                                <span class="badge bg-primary fs-6">@Model.Role</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Member Since</label>
+                            <div class="text-dark">@Model.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                            <input asp-for="Email" class="form-control" readonly />
+                            <small class="text-muted">Email cannot be changed.</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label fw-semibold">Full Name</label>
+                            <input asp-for="FullName" class="form-control" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label fw-semibold">Phone Number</label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="017xxxxxxxx" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Address" class="form-label fw-semibold">Default Delivery Address</label>
+                            <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Back to Store</a>
+                        <button type="submit" class="btn btn-primary fw-semibold px-4">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

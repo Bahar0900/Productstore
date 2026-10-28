@@ -1,0 +1,133 @@
+@model CartViewModel
+@{
+    ViewData["Title"] = "Shopping Cart";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h2 class="fw-bold mb-0"><i class="fa-solid fa-cart-shopping text-warning me-2"></i> Shopping Cart</h2>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Continue Shopping
+    </a>
+</div>
+
+@if (!Model.Items.Any())
+{
+    <div class="card shadow-sm border-0 rounded-3 py-5 text-center bg-white">
+        <div class="card-body">
+            <i class="fa-solid fa-cart-arrow-down fa-4x text-muted mb-3"></i>
+            <h4 class="fw-bold">Your Cart is Currently Empty</h4>
+            <p class="text-muted">Looks like you haven't added any products to your cart yet.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-warning px-4 fw-semibold mt-2">
+                <i class="fa-solid fa-basket-shopping me-1"></i> Explore Products
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @* Cart Items Table *@
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Product</th>
+                                    <th>Price</th>
+                                    <th class="text-center" style="width: 140px;">Quantity</th>
+                                    <th>Total</th>
+                                    <th class="text-end pe-3">Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <img src="/ProductImages/@item.Product.ImageFileName" width="60" height="60" class="rounded border object-fit-contain bg-white" alt="@item.Product.Name" onerror="this.src='https://via.placeholder.com/60?text=Product'">
+                                                <div>
+                                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="fw-bold text-dark text-decoration-none">
+                                                        @item.Product.Name
+                                                    </a>
+                                                    <div class="small text-muted">@item.Product.Brand | @item.Product.Category</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="fw-semibold">$@item.Product.Price.ToString("F2")</td>
+                                        <td>
+                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <form asp-controller="Cart" asp-action="UpdateQuantity" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="cartItemId" value="@item.Id" />
+                                                    <input type="hidden" name="change" value="-1" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="width: 30px; height: 30px; padding: 0;">-</button>
+                                                </form>
+                                                <span class="fw-bold px-2">@item.Quantity</span>
+                                                <form asp-controller="Cart" asp-action="UpdateQuantity" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="cartItemId" value="@item.Id" />
+                                                    <input type="hidden" name="change" value="1" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="width: 30px; height: 30px; padding: 0;" @(item.Quantity >= item.Product.StockQuantity ? "disabled" : "")>+</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="fw-bold text-primary">$@((item.Quantity * item.Product.Price).ToString("F2"))</td>
+                                        <td class="text-end pe-3">
+                                            <form asp-controller="Cart" asp-action="Remove" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="cartItemId" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove Item">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Order Summary Sidebar *@
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fa-solid fa-receipt me-2 text-warning"></i> Order Summary</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal (@Model.Items.Sum(i => i.Quantity) items)</span>
+                        <span class="fw-semibold">$@Model.SubTotal.ToString("F2")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Estimated Delivery</span>
+                        <span class="fw-semibold">$@Model.ShippingFee.ToString("F2")</span>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="fs-5 fw-bold">Total Amount</span>
+                        <span class="fs-4 fw-bold text-primary">$@Model.TotalAmount.ToString("F2")</span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a asp-controller="Checkout" asp-action="Index" class="btn btn-warning btn-lg fw-bold text-dark shadow-sm">
+                            <i class="fa-solid fa-credit-card me-2"></i> Proceed to Checkout
+                        </a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                            Continue Shopping
+                        </a>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top small text-muted text-center">
+                        <i class="fa-solid fa-lock text-success me-1"></i> 256-bit Encrypted Checkout
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

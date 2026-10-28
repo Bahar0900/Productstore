@@ -1,0 +1,201 @@
+@using System.Security.Claims
+@inject ProductStore.Services.ICartService CartService
+@{
+    var cartCount = await CartService.GetCartCountAsync();
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var userName = User.Identity?.Name ?? "Account";
+    var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ProductStore E-Commerce</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ProductStore.styles.css" asp-append-version="true" />
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-2">
+            <div class="container">
+                <a class="navbar-brand fw-bold fs-4 d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                    <i class="fa-solid fa-bag-shopping text-warning"></i>
+                    <span>Product<span class="text-warning">Store</span></span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNavbar">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" asp-controller="Home" asp-action="Index">
+                                <i class="fa-solid fa-house me-1 text-secondary"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" asp-controller="Products" asp-action="Index">
+                                <i class="fa-solid fa-store me-1 text-secondary"></i> All Products
+                            </a>
+                        </li>
+
+                        @* Seller / ProductOwner Menu *@
+                        @if (isAuthenticated && (User.IsInRole(UserRoles.ProductOwner) || User.IsInRole(UserRoles.Admin)))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-warning" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-shop me-1"></i> Seller Hub
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark shadow">
+                                    <li><a class="dropdown-item" asp-controller="Seller" asp-action="Index"><i class="fa-solid fa-chart-line me-2"></i>Dashboard</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Products" asp-action="Create"><i class="fa-solid fa-plus-circle me-2"></i>Launch Product</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Seller" asp-action="SalesOrders"><i class="fa-solid fa-receipt me-2"></i>Customer Orders</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        @* Admin Menu *@
+                        @if (isAuthenticated && User.IsInRole(UserRoles.Admin))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-danger fw-semibold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-shield-halved me-1"></i> Admin Portal
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark shadow">
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><i class="fa-solid fa-gauge-high me-2"></i>Overview & Stats</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Orders"><i class="fa-solid fa-boxes-packing me-2"></i>Manage Orders & Payments</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Users"><i class="fa-solid fa-users-gear me-2"></i>Manage Users & Roles</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Reports"><i class="fa-solid fa-table me-2"></i>SQL View Reports</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        @if (isAuthenticated && User.IsInRole(UserRoles.Customer))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-white" asp-controller="Orders" asp-action="MyOrders">
+                                    <i class="fa-solid fa-box-open me-1 text-secondary"></i> My Orders
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+                        @* Shopping Cart Badge *@
+                        <li class="nav-item">
+                            <a class="btn btn-outline-warning position-relative px-3" asp-controller="Cart" asp-action="Index">
+                                <i class="fa-solid fa-cart-shopping me-1"></i> Cart
+                                <span class="badge rounded-pill bg-danger" id="cartBadge">@cartCount</span>
+                            </a>
+                        </li>
+
+                        @* User Authentication Navigation *@
+                        @if (isAuthenticated)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-circle-user fs-5 text-warning"></i>
+                                    <span>@userName</span>
+                                    <span class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">@userRole</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="fa-solid fa-user me-2 text-primary"></i>My Profile</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Orders" asp-action="MyOrders"><i class="fa-solid fa-truck-fast me-2 text-success"></i>My Orders</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="fa-solid fa-right-from-bracket me-2"></i>Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="btn btn-sm btn-outline-light px-3" asp-controller="Account" asp-action="Login">
+                                    <i class="fa-solid fa-right-to-bracket me-1"></i> Login
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-sm btn-warning px-3 fw-semibold text-dark" asp-controller="Account" asp-action="Register">
+                                    <i class="fa-solid fa-user-plus me-1"></i> Register
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container my-4 flex-grow-1">
+        @* Flash Messages *@
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i> @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i> @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="bg-dark text-white pt-4 pb-3 border-top mt-auto">
+        <div class="container">
+            <div class="row g-4 mb-3">
+                <div class="col-md-4">
+                    <h5 class="fw-bold text-warning mb-2"><i class="fa-solid fa-bag-shopping me-2"></i>ProductStore</h5>
+                    <p class="text-secondary small">
+                        A full-stack, enterprise-grade e-commerce marketplace supporting secure JWT authentication, multi-vendor product launches, and versatile payments including Mobile Banking (bKash, Nagad, Rocket) and Direct Banking.
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-uppercase fw-bold text-light mb-2">Supported Payment Methods</h6>
+                    <div class="d-flex flex-wrap gap-2 text-secondary small align-items-center">
+                        <span class="badge bg-danger p-2"><i class="fa-solid fa-mobile-screen me-1"></i> bKash</span>
+                        <span class="badge bg-warning text-dark p-2"><i class="fa-solid fa-mobile-screen me-1"></i> Nagad</span>
+                        <span class="badge bg-primary p-2"><i class="fa-solid fa-mobile-screen me-1"></i> Rocket</span>
+                        <span class="badge bg-secondary p-2"><i class="fa-solid fa-building-columns me-1"></i> Direct Bank</span>
+                        <span class="badge bg-success p-2"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Cash On Delivery</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-uppercase fw-bold text-light mb-2">Platform Access</h6>
+                    <ul class="list-unstyled text-secondary small mb-0">
+                        <li><i class="fa-solid fa-user-shield me-2 text-warning"></i> Admin: <code>admin@productstore.com</code> (Admin@123)</li>
+                        <li><i class="fa-solid fa-shop me-2 text-info"></i> Seller: <code>seller@productstore.com</code> (Seller@123)</li>
+                        <li><i class="fa-solid fa-user me-2 text-success"></i> Customer: <code>customer@productstore.com</code> (Customer@123)</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="border-secondary my-3" />
+            <div class="text-center text-secondary small">
+                &copy; @DateTime.UtcNow.Year - ProductStore E-Commerce Platform. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

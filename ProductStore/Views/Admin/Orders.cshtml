@@ -1,0 +1,145 @@
+@model List<Order>
+@{
+    ViewData["Title"] = "Order & Payment Management";
+    var currentFilter = ViewBag.CurrentFilter as string ?? "All";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-boxes-packing text-primary me-2"></i> Order & Payment Management</h2>
+        <p class="text-muted mb-0">Review customer orders, verify mobile banking / bank payments, update delivery statuses</p>
+    </div>
+    <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+    </a>
+</div>
+
+@* Filter Tabs *@
+<div class="mb-4">
+    <div class="btn-group shadow-sm">
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="All" class="btn @(currentFilter == "All" ? "btn-dark" : "btn-outline-dark")">All Orders</a>
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="Pending" class="btn @(currentFilter == "Pending" ? "btn-warning text-dark" : "btn-outline-warning text-dark")">Pending</a>
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="Processing" class="btn @(currentFilter == "Processing" ? "btn-info text-dark" : "btn-outline-info text-dark")">Processing</a>
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="Shipped" class="btn @(currentFilter == "Shipped" ? "btn-primary" : "btn-outline-primary")">Shipped</a>
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="Delivered" class="btn @(currentFilter == "Delivered" ? "btn-success" : "btn-outline-success")">Delivered</a>
+        <a asp-controller="Admin" asp-action="Orders" asp-route-status="Cancelled" class="btn @(currentFilter == "Cancelled" ? "btn-danger" : "btn-outline-danger")">Cancelled</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Order Number</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Payment Verification</th>
+                        <th>Order Status</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-box-open fa-2x mb-2 d-block"></i>
+                                No orders matching status '@currentFilter'.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var order in Model)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    <div class="fw-bold">@order.OrderNumber</div>
+                                    <div class="small text-muted">@order.OrderDate.ToString("MMM dd, yyyy HH:mm")</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@order.ShippingFullName</div>
+                                    <div class="small text-muted"><i class="fa-solid fa-phone me-1"></i> @order.ShippingPhone</div>
+                                    <div class="small text-muted"><i class="fa-solid fa-location-dot me-1"></i> @order.ShippingAddress</div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-primary fs-6">$@order.TotalAmount.ToString("F2")</div>
+                                    <div class="small text-muted">@order.OrderItems.Sum(oi => oi.Quantity) items</div>
+                                </td>
+                                <td>
+                                    <div class="mb-1">
+                                        <span class="badge bg-secondary">@(order.Payment?.PaymentMethod ?? "COD")</span>
+                                        @if (!string.IsNullOrEmpty(order.Payment?.Provider))
+                                        {
+                                            <span class="badge bg-light text-dark border">@order.Payment.Provider</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(order.Payment?.TransactionId))
+                                    {
+                                        <div class="small">
+                                            TrxID: <code class="fw-bold text-dark">@order.Payment.TransactionId</code>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(order.Payment?.AccountNumber))
+                                    {
+                                        <div class="small text-muted">
+                                            A/C: @order.Payment.AccountNumber
+                                        </div>
+                                    }
+                                    <div class="mt-1">
+                                        <span class="badge @(order.Payment?.Status == PaymentStatuses.Verified ? "bg-success" : order.Payment?.Status == PaymentStatuses.Failed ? "bg-danger" : "bg-warning text-dark")">
+                                            Status: @(order.Payment?.Status ?? "Pending")
+                                        </span>
+                                    </div>
+
+                                    @* Verify Payment Button *@
+                                    @if (order.Payment != null && order.Payment.Status == PaymentStatuses.Pending)
+                                    {
+                                        <div class="mt-2 d-flex gap-1">
+                                            <form asp-controller="Admin" asp-action="VerifyPayment" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="paymentId" value="@order.Payment.Id" />
+                                                <input type="hidden" name="status" value="@PaymentStatuses.Verified" />
+                                                <button type="submit" class="btn btn-xs btn-success btn-sm py-0 px-2 small">
+                                                    <i class="fa-solid fa-check me-1"></i> Verify TrxID
+                                                </button>
+                                            </form>
+                                            <form asp-controller="Admin" asp-action="VerifyPayment" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="paymentId" value="@order.Payment.Id" />
+                                                <input type="hidden" name="status" value="@PaymentStatuses.Failed" />
+                                                <button type="submit" class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small">
+                                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <form asp-controller="Admin" asp-action="UpdateOrderStatus" method="post" class="d-flex align-items-center gap-1">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <select name="status" class="form-select form-select-sm" style="width: 130px;" onchange="this.form.submit()">
+                                            <option value="@OrderStatuses.Pending" selected="@(order.OrderStatus == OrderStatuses.Pending)">Pending</option>
+                                            <option value="@OrderStatuses.Processing" selected="@(order.OrderStatus == OrderStatuses.Processing)">Processing</option>
+                                            <option value="@OrderStatuses.Shipped" selected="@(order.OrderStatus == OrderStatuses.Shipped)">Shipped</option>
+                                            <option value="@OrderStatuses.Delivered" selected="@(order.OrderStatus == OrderStatuses.Delivered)">Delivered</option>
+                                            <option value="@OrderStatuses.Cancelled" selected="@(order.OrderStatus == OrderStatuses.Cancelled)">Cancelled</option>
+                                        </select>
+                                    </form>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary" title="View Full Invoice">
+                                        <i class="fa-solid fa-file-invoice"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+## .NET Core / Visual Studio .gitignore
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.dbmdl
+*.jsproj.user
+*.vcxproj.user
+.vs/
+.vscode/
+_ReSharper*/
+*.lock.json
+project.lock.json
+*.nuget.props
+*.nuget.targets
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Production secrets override
+appsettings.Production.json

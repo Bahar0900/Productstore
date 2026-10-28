@@ -1,0 +1,92 @@
+@model Product
+@{
+    ViewData["Title"] = $"{Model.Name} - Details";
+}
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">Products</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+    </ol>
+</nav>
+
+<div class="row g-4 mb-5">
+    @* Image Showcase Column *@
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 text-center bg-white rounded-3 h-100 d-flex align-items-center justify-content-center">
+            <img src="/ProductImages/@Model.ImageFileName" class="img-fluid rounded" style="max-height: 400px; object-fit: contain;" alt="@Model.Name" onerror="this.src='https://via.placeholder.com/400x300?text=No+Product+Image'">
+        </div>
+    </div>
+
+    @* Product Details & Purchase Form Column *@
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 rounded-3 h-100 d-flex flex-column">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-secondary text-uppercase">@Model.Category</span>
+                <span class="text-muted small">Brand: <strong class="text-dark">@Model.Brand</strong></span>
+            </div>
+
+            <h2 class="fw-bold mb-3">@Model.Name</h2>
+
+            <div class="d-flex align-items-baseline gap-3 mb-3">
+                <h3 class="fw-bold text-primary mb-0">$@Model.Price.ToString("F2")</h3>
+                <span class="text-muted small">Taxes & Shipping calculated at checkout</span>
+            </div>
+
+            <div class="mb-3">
+                @if (Model.StockQuantity > 5)
+                {
+                    <span class="badge bg-success p-2"><i class="fa-solid fa-check-circle me-1"></i> In Stock (@Model.StockQuantity units available)</span>
+                }
+                else if (Model.StockQuantity > 0)
+                {
+                    <span class="badge bg-warning text-dark p-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock - Only @Model.StockQuantity left</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger p-2"><i class="fa-solid fa-circle-xmark me-1"></i> Currently Out of Stock</span>
+                }
+            </div>
+
+            <hr class="my-3 text-muted" />
+
+            <div class="mb-4">
+                <h6 class="fw-bold text-uppercase small text-muted">Overview / Description</h6>
+                <p class="text-secondary" style="white-space: pre-line;">@Model.Description</p>
+            </div>
+
+            <div class="mt-auto pt-3 border-top">
+                @if (Model.StockQuantity > 0)
+                {
+                    <form asp-controller="Cart" asp-action="AddToCart" method="post" class="row g-2 align-items-center">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="productId" value="@Model.Id" />
+                        <div class="col-3">
+                            <label class="form-label small text-muted fw-semibold">Quantity</label>
+                            <input type="number" name="quantity" class="form-control" value="1" min="1" max="@Model.StockQuantity" />
+                        </div>
+                        <div class="col-9 d-flex align-items-end">
+                            <button type="submit" class="btn btn-warning btn-lg w-100 fw-semibold text-dark shadow-sm">
+                                <i class="fa-solid fa-cart-shopping me-2"></i> Add to Cart
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <button class="btn btn-secondary btn-lg w-100" disabled>Product Out of Stock</button>
+                }
+
+                <div class="mt-3 p-3 bg-light rounded d-flex align-items-center gap-3">
+                    <i class="fa-solid fa-store fa-2x text-primary"></i>
+                    <div>
+                        <div class="small text-muted">Sold by</div>
+                        <div class="fw-bold">@(Model.Owner?.FullName ?? "Official Store")</div>
+                        <div class="small text-muted"><i class="fa-solid fa-shield-check text-success me-1"></i> Verified Merchant</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

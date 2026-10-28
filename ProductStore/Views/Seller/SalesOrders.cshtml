@@ -1,0 +1,73 @@
+@model List<OrderItem>
+@{
+    ViewData["Title"] = "Customer Orders for My Products";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-receipt text-warning me-2"></i> Customer Orders for My Products</h2>
+        <p class="text-muted mb-0">Track orders placed by customers that include your inventory items</p>
+    </div>
+    <a asp-controller="Seller" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Seller Dashboard
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Order Number</th>
+                        <th>Order Date</th>
+                        <th>My Product</th>
+                        <th>Qty Sold</th>
+                        <th>Unit Price</th>
+                        <th>Total Revenue</th>
+                        <th>Customer Shipping</th>
+                        <th>Order Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-box-open fa-2x mb-2 d-block"></i>
+                                No customer orders recorded yet for your products.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@item.Order.OrderNumber</td>
+                                <td class="small text-muted">@item.Order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <div class="fw-semibold">@item.Product.Name</div>
+                                    <div class="small text-muted">@item.Product.Brand</div>
+                                </td>
+                                <td class="fw-bold">@item.Quantity</td>
+                                <td>$@item.UnitPrice.ToString("F2")</td>
+                                <td class="fw-bold text-success">$@item.TotalPrice.ToString("F2")</td>
+                                <td>
+                                    <div class="small fw-semibold">@item.Order.ShippingFullName</div>
+                                    <div class="small text-muted">@item.Order.ShippingPhone</div>
+                                    <div class="small text-muted text-truncate" style="max-width: 180px;">@item.Order.ShippingAddress</div>
+                                </td>
+                                <td>
+                                    <span class="badge @(item.Order.OrderStatus == OrderStatuses.Delivered ? "bg-success" : item.Order.OrderStatus == OrderStatuses.Shipped ? "bg-primary" : "bg-warning text-dark")">
+                                        @item.Order.OrderStatus
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
