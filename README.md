@@ -39,7 +39,7 @@ You can test any role directly using the credentials below:
 - [System Architecture](#-system-architecture)
 - [Authentication & Security Flow](#-authentication--security-flow)
 - [Order & Multi-Channel Payment Lifecycle](#-order--multi-channel-payment-lifecycle)
-- [Database Entity-Relationship (ER) Diagram](#-database-entity-relationship-er-diagram)
+- [Database Schema & Entity Relationships](#-database-schema--entity-relationships)
 - [Role-Based Access Control (RBAC) Matrix](#-role-based-access-control-rbac-matrix)
 - [Technology Stack & Architectural Rationale](#-technology-stack--architectural-rationale)
 - [Project Directory Structure](#-project-directory-structure)
@@ -52,62 +52,44 @@ You can test any role directly using the credentials below:
 
 ## 🏛️ System Architecture
 
-ProductStore follows the **Layered Clean MVC Architecture**, enforcing separation of concerns between client presentation, HTTP controllers, application business domain services, and database persistence.
+ProductStore follows a modular **Clean MVC Architecture** with explicit separation between presentation, middleware security, business services, and data storage.
+
+### 1. High-Level Macro Architecture
 
 ```mermaid
-flowchart TD
-    subgraph ClientLayer ["Client & Presentation Layer"]
-        Browser["User Browser (Desktop / Mobile)"]
-        UI_Views["Razor View Engine (.cshtml)"]
-        UI_Components["Bootstrap 5 + FontAwesome 6 UI"]
-    end
+flowchart LR
+    %% Clean White/Pastel Theme
+    classDef client fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a;
+    classDef app fill:#f8fafc,stroke:#0284c7,stroke-width:2px,color:#0f172a;
+    classDef orm fill:#ffffff,stroke:#7c3aed,stroke-width:2px,color:#0f172a;
+    classDef data fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#0f172a;
 
-    subgraph MiddlewareLayer ["ASP.NET Core HTTP Request Pipeline"]
-        Kestrel["Kestrel / IIS Reverse Proxy"]
-        HTTPS["HTTPS Redirection & Static Files (wwwroot)"]
-        JwtFilter["JWT Authentication & Cookie Interceptor"]
-        RoutingAuth["Endpoint Routing & Role Authorization"]
-    end
+    Client["🌐 Client Tier<br/><b>Browser / Mobile</b><br/>(HTML5 • Bootstrap 5)"]:::client
+    App["⚙️ Application Tier<br/><b>ASP.NET Core 8 MVC</b><br/>(JWT • Controllers • Services)"]:::app
+    ORM["⚡ Data Access Tier<br/><b>EF Core 8 ORM</b><br/>(LINQ • Migrations)"]:::orm
+    DB[("🗄️ Storage Tier<br/><b>Microsoft SQL Server</b><br/>(Tables • SQL Views)")]:::data
+    Disk[("📁 Static File Storage<br/><b>wwwroot/ProductImages</b><br/>(Physical Media)")]:::data
 
-    subgraph ControllerLayer ["Controller Layer (Application Routing)"]
-        AccCtrl["AccountController<br/>(Auth, JWT, Profile)"]
-        HomeCtrl["HomeController<br/>(Storefront, Search, Filter)"]
-        ProdCtrl["ProductsController<br/>(Catalog, Multipart Uploads)"]
-        CartCtrl["CartController<br/>(Session & DB Cart)"]
-        ChkCtrl["CheckoutController<br/>(Payment Processing)"]
-        OrdCtrl["OrdersController<br/>(Invoices, Tracking)"]
-        AdmCtrl["AdminController<br/>(KPIs, Verifications, Users)"]
-        SelCtrl["SellerController<br/>(Seller Hub, Sales)"]
-    end
+    Client <-->|HTTPS Requests / HTML5| App
+    App <-->|C# Method Invocations| ORM
+    ORM <-->|T-SQL Queries & Transactions| DB
+    App -.->|Write Uploaded Images| Disk
+```
 
-    subgraph DomainServices ["Domain Services Layer"]
-        JwtSvc["JwtService<br/>(HMAC-SHA256 Token Engine)"]
-        HashSvc["PasswordHasher<br/>(PBKDF2 SHA-512 + Salt)"]
-        CartSvc["CartService<br/>(Inventory Boundary Enforcer)"]
-        DbInit["DbInitializer<br/>(Auto-Migrations & SQL Views)"]
-    end
+### 2. Request & Middleware Execution Pipeline
 
-    subgraph DataAccessLayer ["Persistence Layer (EF Core 8 ORM)"]
-        DbCtx["ApplicationDBContext"]
-        Entities["Domain Models (Product, Order, Payment...)"]
-    end
+```mermaid
+flowchart LR
+    classDef step fill:#ffffff,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef auth fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
+    classDef dest fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
 
-    subgraph DatabaseLayer ["Database Engine (Microsoft SQL Server)"]
-        Tables[("Relational Tables<br/>(Users, Products, Orders, Payments...)")]
-        SQLView[("Native SQL View<br/>[dbo].[vw_OrderSummaries]")]
-        DiskStorage[("Physical Disk Storage<br/>wwwroot/ProductImages/")]
-    end
-
-    Browser <-->|HTTP/HTTPS Requests| Kestrel
-    Kestrel --> HTTPS --> JwtFilter --> RoutingAuth
-    RoutingAuth --> ControllerLayer
-    ControllerLayer --> DomainServices
-    ControllerLayer --> DataAccessLayer
-    DomainServices --> DataAccessLayer
-    DataAccessLayer --> DatabaseLayer
-    ProdCtrl -.->|Write Uploaded Stream| DiskStorage
-    UI_Views --- UI_Components
-    UI_Views -.->|HTML5 SSR Response| Browser
+    Req["🌐 HTTP Request"]:::step --> SSL["🔒 HTTPS Redirection & Static Files"]:::step
+    SSL --> JWT["🔐 JWT Cookie Interceptor"]:::auth
+    JWT --> RBAC["🛡️ Role Authorization Filter"]:::auth
+    RBAC --> Ctrl["🎯 Target Controller Action"]:::dest
+    Ctrl --> View["📄 Razor View Engine"]:::dest
+    View --> Res["🚀 HTTP 200 / Rendered Page"]:::step
 ```
 
 ---
@@ -119,42 +101,51 @@ The platform utilizes a **Hybrid JWT Architecture**:
 * This allows standard browser navigation, form submissions, and page refreshes to remain seamlessly authenticated without requiring client-side JavaScript headers on every link.
 * Concurrently, the token is returned in REST API responses for external integrations.
 
+### 1. User Sign-In & Token Issuance Flow
+
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Client / Browser
-    participant Controller as AccountController
-    participant Hasher as PasswordHasher (PBKDF2)
-    participant JwtEngine as JwtService
-    participant DB as SQL Server (Users Table)
+    actor User as 👤 User
+    participant Controller as ⚙️ AccountController
+    participant Hasher as 🔒 PasswordHasher
+    participant JwtService as 🔑 JwtService
+    participant DB as 🗄️ SQL Server
 
-    Client->>Controller: POST /Account/Login (Email, Password, RememberMe)
+    User->>Controller: POST /Account/Login (Email, Password)
     Controller->>DB: Query User by Email
-    DB-->>Controller: Return User Entity (PasswordHash, Salt, Role, IsActive)
+    DB-->>Controller: Return User Record (Hash, Salt, Role, IsActive)
 
-    alt Account Disabled (IsActive == false)
-        Controller-->>Client: 403 / Error "Account suspended by Administrator"
-    else Password Mismatch
-        Controller->>Hasher: VerifyPassword(rawPassword, storedHash)
-        Hasher-->>Controller: False
-        Controller-->>Client: Return 401 / Invalid Credentials
-    else Authentication Successful
-        Controller->>Hasher: VerifyPassword(rawPassword, storedHash)
-        Hasher-->>Controller: True (Cryptographic match)
-        Controller->>JwtEngine: GenerateToken(UserClaims: Id, Name, Email, Role)
-        JwtEngine-->>Controller: Signed JWT String (HMAC-SHA256)
-        
-        Note over Controller: Writes token to HttpOnly Secure Cookie: jwt_token
-        Controller->>Controller: Merge Guest Cart Items into User Account
-        
-        alt Role == Admin
-            Controller-->>Client: 302 Redirect to /Admin/Index
-        else Role == ProductOwner
-            Controller-->>Client: 302 Redirect to /Seller/Index
-        else Role == Customer
-            Controller-->>Client: 302 Redirect to /Home/Index
-        end
+    alt Password Matches & Account is Active
+        Controller->>Hasher: VerifyPassword(raw, hash)
+        Hasher-->>Controller: True (PBKDF2 Match)
+        Controller->>JwtService: GenerateToken(Claims: Id, Name, Role)
+        JwtService-->>Controller: Signed JWT (HMAC-SHA256)
+        Controller->>User: Set-Cookie: jwt_token (HttpOnly, Secure, SameSite)
+        Controller-->>User: 302 Redirect to Role Dashboard
+    else Invalid Credentials or Deactivated Account
+        Controller-->>User: Display Error "Invalid email/password or account suspended"
     end
+```
+
+### 2. Request Authorization Verification Flow
+
+```mermaid
+flowchart TD
+    classDef check fill:#ffffff,stroke:#0284c7,stroke-width:2px,color:#0f172a;
+    classDef grant fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef deny fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b,font-weight:bold;
+
+    Req["🌐 User Navigates to Protected Route (e.g. /Admin, /Seller)"]:::check --> CookieCheck{"Cookie 'jwt_token' Present?"}:::check
+
+    CookieCheck -->|No| RedirectLogin["302 Redirect ➔ /Account/Login"]:::deny
+    CookieCheck -->|Yes| VerifyToken{"Valid HMAC-SHA256 Signature & Not Expired?"}:::check
+
+    VerifyToken -->|Invalid / Tampered| ClearCookie["Clear Cookie & 302 Redirect ➔ /Account/Login"]:::deny
+    VerifyToken -->|Valid| RoleCheck{"Matches Required Role?"}:::check
+
+    RoleCheck -->|Role Authorized| Execute["Execute Action & Render Dashboard"]:::grant
+    RoleCheck -->|Role Unauthorized| AccessDenied["302 Redirect ➔ /Account/AccessDenied"]:::deny
 ```
 
 ### Password Hashing Specification
@@ -168,141 +159,75 @@ sequenceDiagram
 
 ## 💳 Order & Multi-Channel Payment Lifecycle
 
+### 1. Customer Checkout & Order Creation
+
 ```mermaid
-flowchart TD
-    Start(["Customer adds products to Cart"]) --> Checkout["Proceeds to Checkout (/Checkout)"]
-    Checkout --> SelectPay{"Select Payment Method"}
+flowchart LR
+    classDef action fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a;
+    classDef pay fill:#eff6ff,stroke:#0284c7,stroke-width:2px,color:#1e3a8a;
+    classDef complete fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
 
-    SelectPay -->|Mobile Banking| MobForm["Selects bKash / Nagad / Rocket<br/>Enters Sender Mobile No. & TrxID"]
-    SelectPay -->|Direct Banking| BankForm["Selects City Bank / DBBL<br/>Enters Account No. & Deposit Reference"]
-    SelectPay -->|Cash On Delivery| CODForm["Selects COD (Pay upon courier delivery)"]
+    Cart["🛒 Items in Cart"]:::action --> SelectPay{"💳 Select Payment Method"}:::pay
 
-    MobForm --> SubmitOrder["Submit Order"]
-    BankForm --> SubmitOrder
-    CODForm --> SubmitOrder
+    SelectPay -->|Mobile Banking| Mob["📱 bKash / Nagad / Rocket<br/>Enter Sender Mobile & TrxID"]:::pay
+    SelectPay -->|Direct Banking| Bank["🏦 City Bank / DBBL Wire<br/>Enter Account No. & Ref ID"]:::pay
+    SelectPay -->|Cash On Delivery| COD["💵 Cash On Delivery<br/>Pay upon delivery"]:::pay
 
-    SubmitOrder --> StockCheck{"Stock Available?"}
-    StockCheck -->|No| RejectOrder["Reject with out-of-stock notification"]
-    StockCheck -->|Yes| CreateRecords["1. Decrement StockQuantity<br/>2. Create Order (Status: Pending)<br/>3. Create Payment (Status: Pending)<br/>4. Empty Cart"]
+    Mob --> OrderGen["📦 Validate Stock & Create Order<br/>(Status: Pending)"]:::action
+    Bank --> OrderGen
+    COD --> OrderGen
 
-    CreateRecords --> Confirmation["Invoice / Order Receipt Displayed"]
+    OrderGen --> Confirm["🧾 Printable Invoice Displayed"]:::complete
+```
 
-    Confirmation --> AdminReview{"Payment Method Review"}
+### 2. Payment Verification & Order Fulfillment
 
-    AdminReview -->|Mobile / Direct Bank| AdminVerif["Admin reviews bank ledger<br/>Matches TrxID in Admin Portal"]
-    AdminReview -->|Cash on Delivery| Dispatch["Courier dispatches package"]
+```mermaid
+flowchart LR
+    classDef pending fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#78350f;
+    classDef admin fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
+    classDef success fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef fail fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
 
-    AdminVerif -->|TrxID Matches| ApprovePay["Admin clicks 'Verify TrxID'<br/>Payment: Verified | Order: Processing"]
-    AdminVerif -->|TrxID Invalid| RejectPay["Admin clicks 'Reject'<br/>Payment: Failed | Order: Cancelled"]
+    PendingOrder["⏳ Order: Pending<br/>Payment: Pending"]:::pending --> AdminReview["🛡️ Admin Reviews Bank Ledger<br/>& Verifies TrxID (/Admin/Orders)"]:::admin
 
-    ApprovePay --> Dispatch
-    Dispatch --> Delivery["Courier delivers package"]
-    Delivery --> Complete["Order marked Delivered<br/>Customer tracks timeline live"]
+    AdminReview -->|TrxID Matches Ledger| Verified["✅ 1-Click 'Verify TrxID'<br/>Payment: Verified<br/>Order: Processing"]:::success
+    AdminReview -->|TrxID Fraud / Unpaid| Rejected["❌ Click 'Reject'<br/>Payment: Failed<br/>Order: Cancelled"]:::fail
+
+    Verified --> Dispatch["🚚 Courier Dispatches Order<br/>Order: Shipped"]:::success
+    Dispatch --> Delivered["📦 Customer Receives Package<br/>Order: Delivered"]:::success
 ```
 
 ---
 
-## 🗄️ Database Entity-Relationship (ER) Diagram
+## 🗄️ Database Schema & Entity Relationships
 
-The relational schema is managed through Entity Framework Core Code-First migrations with referential integrity constraints, unique indexes, and cascading behaviors.
+The relational schema is structured with strict referential integrity, foreign keys, and indexes in Microsoft SQL Server.
+
+### Entity Relationship Map
 
 ```mermaid
-erDiagram
-    USERS ||--o{ PRODUCTS : "launches / owns"
-    USERS ||--o{ ORDERS : "places"
-    USERS ||--o{ CART_ITEMS : "maintains"
-    PRODUCTS ||--o{ ORDER_ITEMS : "included in"
-    PRODUCTS ||--o{ CART_ITEMS : "added to"
-    ORDERS ||--|{ ORDER_ITEMS : "contains"
-    ORDERS ||--|| PAYMENTS : "settled via"
+flowchart TD
+    classDef user fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
+    classDef product fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#713f12,font-weight:bold;
+    classDef order fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef payment fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#581c87,font-weight:bold;
+    classDef cart fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
 
-    USERS {
-        int Id PK "Auto Increment"
-        string FullName "nvarchar(100)"
-        string Email "nvarchar(150), Unique Index"
-        string PasswordHash "nvarchar(max), PBKDF2"
-        string Role "nvarchar(30), Admin | ProductOwner | Customer"
-        string PhoneNumber "nvarchar(20), Nullable"
-        string Address "nvarchar(250), Nullable"
-        bit IsActive "Default: 1 (Soft ban switch)"
-        datetime2 CreatedAt "UTC Timestamp"
-    }
+    U["👤 USERS<br/>• Id (PK)<br/>• FullName, Email (Unique)<br/>• PasswordHash, Role, IsActive"]:::user
+    P["📦 PRODUCTS<br/>• Id (PK)<br/>• Name, Brand, Category, Price<br/>• StockQuantity, IsActive<br/>• OwnerId (FK)"]:::product
+    C["🛒 CART_ITEMS<br/>• Id (PK)<br/>• CartSessionId, UserId (FK)<br/>• ProductId (FK), Quantity"]:::cart
+    O["📋 ORDERS<br/>• Id (PK)<br/>• OrderNumber, UserId (FK)<br/>• TotalAmount, OrderStatus<br/>• ShippingAddress, Phone"]:::order
+    OI["📑 ORDER_ITEMS<br/>• Id (PK)<br/>• OrderId (FK), ProductId (FK)<br/>• UnitPrice, Quantity, TotalPrice"]:::order
+    PAY["💳 PAYMENTS<br/>• Id (PK)<br/>• OrderId (FK, Unique)<br/>• PaymentMethod, Provider<br/>• TransactionId, Status"]:::payment
 
-    PRODUCTS {
-        int Id PK "Auto Increment"
-        string Name "nvarchar(100)"
-        string Brand "nvarchar(100)"
-        string Category "nvarchar(100)"
-        decimal Price "decimal(10,2)"
-        string Description "nvarchar(max)"
-        string ImageFileName "nvarchar(100)"
-        int StockQuantity "Default: 20"
-        bit IsActive "Default: 1"
-        int OwnerId FK "Nullable, OnDelete: SetNull"
-        datetime2 CreatedAt "UTC Timestamp"
-    }
-
-    CART_ITEMS {
-        int Id PK "Auto Increment"
-        string CartSessionId "nvarchar(100), Nullable (Guest tracking)"
-        int UserId FK "Nullable (Member tracking)"
-        int ProductId FK "OnDelete: Cascade"
-        int Quantity "Quantity requested"
-        datetime2 CreatedAt "UTC Timestamp"
-    }
-
-    ORDERS {
-        int Id PK "Auto Increment"
-        string OrderNumber "nvarchar(50), e.g. ORD-20261029-XXXX"
-        int UserId FK "OnDelete: Cascade"
-        datetime2 OrderDate "UTC Timestamp"
-        decimal SubTotal "decimal(10,2)"
-        decimal ShippingFee "decimal(10,2), Fixed: 50.00"
-        decimal TotalAmount "decimal(10,2)"
-        string OrderStatus "Pending | Processing | Shipped | Delivered | Cancelled"
-        string ShippingFullName "nvarchar(100)"
-        string ShippingEmail "nvarchar(150)"
-        string ShippingPhone "nvarchar(30)"
-        string ShippingAddress "nvarchar(300)"
-        string OrderNotes "nvarchar(500), Nullable"
-    }
-
-    ORDER_ITEMS {
-        int Id PK "Auto Increment"
-        int OrderId FK "OnDelete: Cascade"
-        int ProductId FK "OnDelete: Cascade"
-        decimal UnitPrice "decimal(10,2) (Price snapshot)"
-        int Quantity "Units bought"
-        decimal TotalPrice "decimal(10,2)"
-    }
-
-    PAYMENTS {
-        int Id PK "Auto Increment"
-        int OrderId FK "Unique Index, OnDelete: Cascade"
-        string PaymentMethod "MobileBanking | DirectBanking | CashOnDelivery"
-        string Provider "bKash | Nagad | Rocket | City Bank | COD"
-        string AccountNumber "nvarchar(60), Nullable"
-        string TransactionId "nvarchar(100), TrxID / Ref"
-        decimal Amount "decimal(10,2)"
-        string Status "Pending | Verified | Failed | Refunded"
-        datetime2 PaymentDate "UTC Timestamp"
-        datetime2 VerifiedAt "Nullable"
-        string AdminNotes "nvarchar(300), Nullable"
-    }
-
-    ORDER_SUMMARY_VIEW {
-        int OrderId "From Orders"
-        string OrderNumber "From Orders"
-        datetime2 OrderDate "From Orders"
-        decimal TotalAmount "From Orders"
-        string OrderStatus "From Orders"
-        string CustomerName "From Users"
-        string CustomerEmail "From Users"
-        string PaymentMethod "From Payments"
-        string PaymentStatus "From Payments"
-        string TransactionId "From Payments"
-        int TotalItems "Aggregated SUM(Quantity)"
-    }
+    U -->|1:N (Launches / Owns)| P
+    U -->|1:N (Places)| O
+    U -->|1:N (Maintains)| C
+    P -->|1:N (Added to)| C
+    P -->|1:N (Included in)| OI
+    O -->|1:N (Contains)| OI
+    O -->|1:1 (Settled by)| PAY
 ```
 
 ---
