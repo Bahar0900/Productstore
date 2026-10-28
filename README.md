@@ -58,22 +58,21 @@ ProductStore follows a modular **Clean MVC Architecture** with explicit separati
 
 ```mermaid
 flowchart LR
-    %% Clean White/Pastel Theme
     classDef client fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a;
     classDef app fill:#f8fafc,stroke:#0284c7,stroke-width:2px,color:#0f172a;
     classDef orm fill:#ffffff,stroke:#7c3aed,stroke-width:2px,color:#0f172a;
     classDef data fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#0f172a;
 
-    Client["🌐 Client Tier<br/><b>Browser / Mobile</b><br/>(HTML5 • Bootstrap 5)"]:::client
-    App["⚙️ Application Tier<br/><b>ASP.NET Core 8 MVC</b><br/>(JWT • Controllers • Services)"]:::app
-    ORM["⚡ Data Access Tier<br/><b>EF Core 8 ORM</b><br/>(LINQ • Migrations)"]:::orm
-    DB[("🗄️ Storage Tier<br/><b>Microsoft SQL Server</b><br/>(Tables • SQL Views)")]:::data
-    Disk[("📁 Static File Storage<br/><b>wwwroot/ProductImages</b><br/>(Physical Media)")]:::data
+    Client["🌐 Client Tier<br/>Browser / Mobile<br/>(HTML5 / Bootstrap 5)"]:::client
+    App["⚙️ Application Tier<br/>ASP.NET Core 8 MVC<br/>(JWT / Controllers)"]:::app
+    ORM["⚡ Data Access Tier<br/>EF Core 8 ORM<br/>(LINQ / Migrations)"]:::orm
+    DB[("🗄️ Storage Tier<br/>Microsoft SQL Server<br/>(Tables / SQL Views)")]:::data
+    Disk[("📁 Static File Storage<br/>wwwroot/ProductImages<br/>(Media Files)")]:::data
 
-    Client <-->|HTTPS Requests / HTML5| App
-    App <-->|C# Method Invocations| ORM
-    ORM <-->|T-SQL Queries & Transactions| DB
-    App -.->|Write Uploaded Images| Disk
+    Client <-->|"HTTPS Requests / HTML5"| App
+    App <-->|"C# Method Invocations"| ORM
+    ORM <-->|"T-SQL Queries / Transactions"| DB
+    App -.->|"Save Uploaded Images"| Disk
 ```
 
 ### 2. Request & Middleware Execution Pipeline
@@ -81,15 +80,15 @@ flowchart LR
 ```mermaid
 flowchart LR
     classDef step fill:#ffffff,stroke:#64748b,stroke-width:2px,color:#0f172a;
-    classDef auth fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
-    classDef dest fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef auth fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef dest fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
 
-    Req["🌐 HTTP Request"]:::step --> SSL["🔒 HTTPS Redirection & Static Files"]:::step
+    Req["🌐 HTTP Request"]:::step --> SSL["🔒 HTTPS & Static Files"]:::step
     SSL --> JWT["🔐 JWT Cookie Interceptor"]:::auth
     JWT --> RBAC["🛡️ Role Authorization Filter"]:::auth
     RBAC --> Ctrl["🎯 Target Controller Action"]:::dest
     Ctrl --> View["📄 Razor View Engine"]:::dest
-    View --> Res["🚀 HTTP 200 / Rendered Page"]:::step
+    View --> Res["🚀 HTTP 200 Response"]:::step
 ```
 
 ---
@@ -116,15 +115,15 @@ sequenceDiagram
     Controller->>DB: Query User by Email
     DB-->>Controller: Return User Record (Hash, Salt, Role, IsActive)
 
-    alt Password Matches & Account is Active
+    alt Password Matches and Account is Active
         Controller->>Hasher: VerifyPassword(raw, hash)
         Hasher-->>Controller: True (PBKDF2 Match)
         Controller->>JwtService: GenerateToken(Claims: Id, Name, Role)
         JwtService-->>Controller: Signed JWT (HMAC-SHA256)
-        Controller->>User: Set-Cookie: jwt_token (HttpOnly, Secure, SameSite)
+        Controller->>User: Set-Cookie: jwt_token (HttpOnly, Secure)
         Controller-->>User: 302 Redirect to Role Dashboard
     else Invalid Credentials or Deactivated Account
-        Controller-->>User: Display Error "Invalid email/password or account suspended"
+        Controller-->>User: Display Error Message
     end
 ```
 
@@ -133,19 +132,19 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     classDef check fill:#ffffff,stroke:#0284c7,stroke-width:2px,color:#0f172a;
-    classDef grant fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
-    classDef deny fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b,font-weight:bold;
+    classDef grant fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef deny fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
 
-    Req["🌐 User Navigates to Protected Route (e.g. /Admin, /Seller)"]:::check --> CookieCheck{"Cookie 'jwt_token' Present?"}:::check
+    Req["🌐 User Navigates to Protected Route"]:::check --> CookieCheck{"Cookie jwt_token Present?"}:::check
 
-    CookieCheck -->|No| RedirectLogin["302 Redirect ➔ /Account/Login"]:::deny
-    CookieCheck -->|Yes| VerifyToken{"Valid HMAC-SHA256 Signature & Not Expired?"}:::check
+    CookieCheck -->|"No"| RedirectLogin["302 Redirect to /Account/Login"]:::deny
+    CookieCheck -->|"Yes"| VerifyToken{"Valid Signature & Not Expired?"}:::check
 
-    VerifyToken -->|Invalid / Tampered| ClearCookie["Clear Cookie & 302 Redirect ➔ /Account/Login"]:::deny
-    VerifyToken -->|Valid| RoleCheck{"Matches Required Role?"}:::check
+    VerifyToken -->|"Invalid"| ClearCookie["Clear Cookie and Redirect to /Account/Login"]:::deny
+    VerifyToken -->|"Valid"| RoleCheck{"Matches Required Role?"}:::check
 
-    RoleCheck -->|Role Authorized| Execute["Execute Action & Render Dashboard"]:::grant
-    RoleCheck -->|Role Unauthorized| AccessDenied["302 Redirect ➔ /Account/AccessDenied"]:::deny
+    RoleCheck -->|"Role Authorized"| Execute["Execute Action & Render Dashboard"]:::grant
+    RoleCheck -->|"Role Unauthorized"| AccessDenied["302 Redirect to /Account/AccessDenied"]:::deny
 ```
 
 ### Password Hashing Specification
@@ -165,15 +164,15 @@ flowchart TD
 flowchart LR
     classDef action fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a;
     classDef pay fill:#eff6ff,stroke:#0284c7,stroke-width:2px,color:#1e3a8a;
-    classDef complete fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef complete fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
 
-    Cart["🛒 Items in Cart"]:::action --> SelectPay{"💳 Select Payment Method"}:::pay
+    Cart["🛒 Items in Cart"]:::action --> SelectPay{"💳 Payment Method"}:::pay
 
-    SelectPay -->|Mobile Banking| Mob["📱 bKash / Nagad / Rocket<br/>Enter Sender Mobile & TrxID"]:::pay
-    SelectPay -->|Direct Banking| Bank["🏦 City Bank / DBBL Wire<br/>Enter Account No. & Ref ID"]:::pay
-    SelectPay -->|Cash On Delivery| COD["💵 Cash On Delivery<br/>Pay upon delivery"]:::pay
+    SelectPay -->|"Mobile Banking"| Mob["📱 bKash / Nagad / Rocket<br/>Sender Mobile & TrxID"]:::pay
+    SelectPay -->|"Direct Banking"| Bank["🏦 City Bank / DBBL<br/>Account No. & Ref ID"]:::pay
+    SelectPay -->|"Cash On Delivery"| COD["💵 Cash On Delivery<br/>Pay upon delivery"]:::pay
 
-    Mob --> OrderGen["📦 Validate Stock & Create Order<br/>(Status: Pending)"]:::action
+    Mob --> OrderGen["📦 Validate Stock & Create Order"]:::action
     Bank --> OrderGen
     COD --> OrderGen
 
@@ -185,14 +184,14 @@ flowchart LR
 ```mermaid
 flowchart LR
     classDef pending fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#78350f;
-    classDef admin fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
-    classDef success fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+    classDef admin fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef success fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
     classDef fail fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
 
-    PendingOrder["⏳ Order: Pending<br/>Payment: Pending"]:::pending --> AdminReview["🛡️ Admin Reviews Bank Ledger<br/>& Verifies TrxID (/Admin/Orders)"]:::admin
+    PendingOrder["⏳ Order: Pending<br/>Payment: Pending"]:::pending --> AdminReview["🛡️ Admin Audits TrxID"]:::admin
 
-    AdminReview -->|TrxID Matches Ledger| Verified["✅ 1-Click 'Verify TrxID'<br/>Payment: Verified<br/>Order: Processing"]:::success
-    AdminReview -->|TrxID Fraud / Unpaid| Rejected["❌ Click 'Reject'<br/>Payment: Failed<br/>Order: Cancelled"]:::fail
+    AdminReview -->|"TrxID Verified"| Verified["✅ 1-Click Verify TrxID<br/>Payment: Verified<br/>Order: Processing"]:::success
+    AdminReview -->|"TrxID Invalid"| Rejected["❌ Reject Payment<br/>Payment: Failed<br/>Order: Cancelled"]:::fail
 
     Verified --> Dispatch["🚚 Courier Dispatches Order<br/>Order: Shipped"]:::success
     Dispatch --> Delivered["📦 Customer Receives Package<br/>Order: Delivered"]:::success
@@ -208,10 +207,10 @@ The relational schema is structured with strict referential integrity, foreign k
 
 ```mermaid
 flowchart TD
-    classDef user fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold;
-    classDef product fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#713f12,font-weight:bold;
-    classDef order fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
-    classDef payment fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#581c87,font-weight:bold;
+    classDef user fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef product fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#713f12;
+    classDef order fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef payment fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#581c87;
     classDef cart fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
 
     U["👤 USERS<br/>• Id (PK)<br/>• FullName, Email (Unique)<br/>• PasswordHash, Role, IsActive"]:::user
@@ -221,13 +220,13 @@ flowchart TD
     OI["📑 ORDER_ITEMS<br/>• Id (PK)<br/>• OrderId (FK), ProductId (FK)<br/>• UnitPrice, Quantity, TotalPrice"]:::order
     PAY["💳 PAYMENTS<br/>• Id (PK)<br/>• OrderId (FK, Unique)<br/>• PaymentMethod, Provider<br/>• TransactionId, Status"]:::payment
 
-    U -->|1:N (Launches / Owns)| P
-    U -->|1:N (Places)| O
-    U -->|1:N (Maintains)| C
-    P -->|1:N (Added to)| C
-    P -->|1:N (Included in)| OI
-    O -->|1:N (Contains)| OI
-    O -->|1:1 (Settled by)| PAY
+    U -->|"1 : N (Owns)"| P
+    U -->|"1 : N (Places)"| O
+    U -->|"1 : N (Maintains)"| C
+    P -->|"1 : N (Added to)"| C
+    P -->|"1 : N (Included in)"| OI
+    O -->|"1 : N (Contains)"| OI
+    O -->|"1 : 1 (Paid via)"| PAY
 ```
 
 ---
